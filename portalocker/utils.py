@@ -77,26 +77,21 @@ class Lock(object):
         except portalocker.LockException as exception:
             # Try till the timeout is 0
             while timeout > 0:
-                # Wait a bit
-                time.sleep(check_interval)
-                timeout -= check_interval
-
                 # Try again
                 try:
-
                     # We already tried to the get the lock
                     # If fail_when_locked is true, then stop trying
                     if fail_when_locked:
                         raise AlreadyLocked(exception)
-
                     else:  # pragma: no cover
+                        # Wait a bit
+                        time.sleep(check_interval)
+                        timeout -= check_interval
                         # We've got the lock
                         fh = self._get_lock(fh)
                         break
-
                 except portalocker.LockException:
                     pass
-
             else:
                 # We got a timeout... reraising
                 raise portalocker.LockException(exception)
