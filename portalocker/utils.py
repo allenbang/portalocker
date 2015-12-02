@@ -2,9 +2,10 @@
 import time
 from . import portalocker
 
-DEFAULT_TIMEOUT = 5
+DEFAULT_TIMEOUT = 1
 DEFAULT_CHECK_INTERVAL = 0.25
-LOCK_METHOD = portalocker.LOCK_EX | portalocker.LOCK_NB
+LOCK_METHOD_BLOCK = portalocker.LOCK_EX
+LOCK_METHOD_NONBLOCK = portalocker.LOCK_EX | portalocker.LOCK_NB
 
 __all__ = [
     'Lock',
@@ -20,7 +21,8 @@ class Lock(object):
 
     def __init__(
             self, filename, mode='a', truncate=0, timeout=DEFAULT_TIMEOUT,
-            check_interval=DEFAULT_CHECK_INTERVAL, fail_when_locked=True):
+            check_interval=DEFAULT_CHECK_INTERVAL, fail_when_locked=True,
+            use_block_lock=False):
         '''Lock manager with build-in timeout
 
         filename -- filename
@@ -31,6 +33,7 @@ class Lock(object):
         check_interval -- check interval while waiting
         fail_when_locked -- after the initial lock failed, return an error
             or lock the file
+        use_block_lock -- acquire file lock in block mode, default mode is nonblock
 
         fail_when_locked is useful when multiple threads/processes can race
         when creating a file. If set to true than the system will wait till
@@ -47,6 +50,7 @@ class Lock(object):
         self.timeout = timeout
         self.check_interval = check_interval
         self.fail_when_locked = fail_when_locked
+        self.use_block_lock = use_block_lock
 
         assert 'w' not in mode, 'Mode "w" clears the file before locking'
 
@@ -111,7 +115,10 @@ class Lock(object):
         Try to lock the given filehandle
 
         returns LockException if it fails'''
-        portalocker.lock(fh, LOCK_METHOD)
+        if self.use_block_lock:
+            portalocker.lock(fh, LOCK_METHOD_BLOCK)
+        else:
+            portalocker.lock(fh, LOCK_METHOD_NONBLOCK)
         return fh
 
     def _prepare_fh(self, fh, truncate=None):
